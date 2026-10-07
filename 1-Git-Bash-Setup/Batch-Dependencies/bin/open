@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# macOS/Linux-style convenience command for Windows Explorer/default apps.
+if [[ $# -eq 0 ]]; then
+    explorer.exe .
+else
+    cmd.exe /c start "" "$(cygpath -w "$1" 2>/dev/null || printf '%s' "$1")"
+fi

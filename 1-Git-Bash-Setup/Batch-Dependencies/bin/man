@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+if [[ $# -lt 1 ]]; then
+    echo "Usage: man <command>"
+    echo "Git Bash does not ship the full Ubuntu man-page database."
+    echo "This compatibility command displays a program's built-in help."
+    exit 0
+fi
+
+cmd="$1"
+shift
+
+if command -v "$cmd" >/dev/null 2>&1; then
+    "$cmd" --help "$@" 2>&1 | less -R
+else
+    echo "No command named '$cmd' was found."
+    echo "Try: apt search $cmd"
+    exit 127
+fi

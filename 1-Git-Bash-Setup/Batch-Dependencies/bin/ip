@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+case "${1:-}" in
+    a|addr|address|link|"")
+        ipconfig.exe
+        ;;
+    route|r)
+        route.exe print -4
+        ;;
+    *)
+        echo "Limited Git Bash compatibility for Linux 'ip'."
+        echo "Supported: ip addr | ip link | ip route"
+        exit 2
+        ;;
+esac
