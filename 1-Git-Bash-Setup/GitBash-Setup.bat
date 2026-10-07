@@ -20,12 +20,29 @@ echo   %USERPROFILE%
 echo.
 
 REM ------------------------------------------------------------
-REM Verify Git for Windows exists.
+REM Verify Git for Windows exists AND make sure normal Windows CMD
+REM can recognize the "git" command.
+REM
+REM If Git is installed but its \cmd folder is missing from PATH,
+REM this setup adds it to the CURRENT USER'S Windows PATH.
 REM ------------------------------------------------------------
+echo [1/8] Checking Git for Windows and Windows CMD PATH...
+
 where git.exe >nul 2>&1
-if errorlevel 1 (
-    if exist "%ProgramFiles%\Git\bin\git.exe" goto :git_found
-    if exist "%LOCALAPPDATA%\Programs\Git\bin\git.exe" goto :git_found
+if not errorlevel 1 (
+    for /f "delims=" %%V in ('git --version 2^>nul') do set "GIT_VERSION=%%V"
+    echo   [OK] Git is already recognized by Windows CMD.
+    if defined GIT_VERSION echo        !GIT_VERSION!
+    goto :git_ready
+)
+
+echo   Git is installed or expected, but "git" is not currently recognized.
+echo   Looking for the Git for Windows installation...
+
+call :find_git_cmd
+
+if not defined GITCMDDIR (
+    echo.
     echo ERROR: Git for Windows was not found.
     echo.
     echo Install normal Git for Windows first, then run this file again.
@@ -33,9 +50,41 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-:git_found
 
-echo [1/7] Git for Windows detected.
+echo   [FOUND] %GITCMDDIR%
+echo   Adding this folder to the current user's Windows PATH...
+
+REM Use PowerShell/.NET instead of SETX so an existing long PATH is not truncated.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$g=$env:GITCMDDIR; $p=[Environment]::GetEnvironmentVariable('Path','User'); if([string]::IsNullOrWhiteSpace($p)){[Environment]::SetEnvironmentVariable('Path',$g,'User'); exit 0}; $found=$false; foreach($x in ($p -split ';')){if($x.Trim().TrimEnd('\') -ieq $g.TrimEnd('\')){$found=$true; break}}; if(-not $found){[Environment]::SetEnvironmentVariable('Path',$p.TrimEnd(';')+';'+$g,'User')}" >nul 2>&1
+
+if errorlevel 1 (
+    echo.
+    echo ERROR: Git was found, but its CMD folder could not be added to PATH.
+    echo       Git folder: %GITCMDDIR%
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Make Git available to this running BAT immediately too.
+set "PATH=%GITCMDDIR%;%PATH%"
+
+where git.exe >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo ERROR: Git PATH was updated, but "git" still could not be verified.
+    echo.
+    pause
+    exit /b 1
+)
+
+for /f "delims=" %%V in ('git --version 2^>nul') do set "GIT_VERSION=%%V"
+echo   [OK] Git has been added to the Windows user PATH.
+if defined GIT_VERSION echo        !GIT_VERSION!
+echo   [OK] New CMD windows will recognize the "git" command.
+
+:git_ready
 
 REM ------------------------------------------------------------
 REM Verify package files exist in .\Batch-Dependencies beside this BAT.
@@ -50,7 +99,7 @@ for %%F in (".minttyrc" ".bashrc" ".bash_profile" "bin\apt" "bin\linux-help") do
     )
 )
 
-echo [2/7] Setup files verified.
+echo [2/8] Setup files verified.
 
 REM ------------------------------------------------------------
 REM Back up old user configuration.
@@ -65,7 +114,7 @@ if exist "%USERPROFILE%\.minttyrc" copy /y "%USERPROFILE%\.minttyrc" "%BACKUP%\.
 if exist "%USERPROFILE%\.bashrc" copy /y "%USERPROFILE%\.bashrc" "%BACKUP%\.bashrc" >nul
 if exist "%USERPROFILE%\.bash_profile" copy /y "%USERPROFILE%\.bash_profile" "%BACKUP%\.bash_profile" >nul
 
-echo [3/7] Existing shell settings backed up to:
+echo [3/8] Existing shell settings backed up to:
 echo       %BACKUP%
 
 REM ------------------------------------------------------------
@@ -78,7 +127,7 @@ copy /y "%DEPS%.bash_profile" "%USERPROFILE%\.bash_profile" >nul || goto :copy_e
 if not exist "%BINDEST%" mkdir "%BINDEST%"
 copy /y "%DEPS%bin\*" "%BINDEST%\" >nul || goto :copy_error
 
-echo [4/7] Mintty theme, Bash configuration and Linux commands installed.
+echo [4/8] Mintty theme, Bash configuration and Linux commands installed.
 
 REM ------------------------------------------------------------
 REM Enable Sudo for Windows if supported and currently disabled.
@@ -86,7 +135,7 @@ REM Windows 11 24H2+ includes sudo.exe. Existing enabled modes are
 REM preserved. If disabled, use Microsoft's safer default mode:
 REM forceNewWindow. Only this system-setting step is elevated.
 REM ------------------------------------------------------------
-echo [5/7] Checking Sudo for Windows...
+echo [5/8] Checking Sudo for Windows...
 
 if not exist "%SystemRoot%\System32\sudo.exe" (
     echo   [SKIP] Sudo for Windows is not available on this Windows version.
@@ -140,12 +189,12 @@ REM Failure of one optional tool does not stop the configuration.
 REM ------------------------------------------------------------
 where winget.exe >nul 2>&1
 if errorlevel 1 (
-    echo [6/7] WinGet not found - skipping optional nano/wget/jq installs.
+    echo [6/8] WinGet not found - skipping optional nano/wget/jq installs.
     echo       The apt wrapper is installed, but requires WinGet to install packages.
     goto :skip_tools
 )
 
-echo [6/7] Installing familiar command-line tools with WinGet...
+echo [6/8] Installing familiar command-line tools with WinGet...
 echo.
 call :install_pkg GNU.Nano nano
 call :install_pkg JernejSimoncic.Wget wget
@@ -153,16 +202,35 @@ call :install_pkg jqlang.jq jq
 
 :skip_tools
 REM ------------------------------------------------------------
+REM Final Git/CMD verification.
+REM ------------------------------------------------------------
+echo.
+echo [7/8] Verifying Git command for Windows CMD...
+where git.exe >nul 2>&1
+if errorlevel 1 (
+    echo   [WARN] Git could not be found in this setup process.
+    echo          Close this window and open a NEW Command Prompt, then try:
+    echo            git --version
+) else (
+    for /f "delims=" %%V in ('git --version 2^>nul') do set "GIT_VERSION=%%V"
+    echo   [OK] git command recognized.
+    if defined GIT_VERSION echo        !GIT_VERSION!
+)
+
+REM ------------------------------------------------------------
 REM Finish.
 REM ------------------------------------------------------------
 echo.
-echo [7/7] Setup complete.
+echo [8/8] Setup complete.
 echo.
 echo ============================================================
 echo  IMPORTANT: Close all Git Bash windows, then open Git Bash again.
 echo ============================================================
 echo.
-echo Test these commands:
+echo Test Windows CMD after opening a NEW Command Prompt:
+echo   git --version
+echo.
+echo Test these Git Bash commands:
 echo   linux-help
 echo   ll
 echo   nano --version
@@ -179,6 +247,46 @@ echo   %BACKUP%
 echo.
 pause
 exit /b 0
+
+:find_git_cmd
+set "GITCMDDIR="
+
+REM Most common machine-wide Git for Windows location.
+if exist "%ProgramFiles%\Git\cmd\git.exe" (
+    set "GITCMDDIR=%ProgramFiles%\Git\cmd"
+    exit /b 0
+)
+
+REM Less-common 32-bit installation.
+if defined ProgramFiles(x86) if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" (
+    set "GITCMDDIR=%ProgramFiles(x86)%\Git\cmd"
+    exit /b 0
+)
+
+REM Common per-user Git for Windows installation.
+if exist "%LOCALAPPDATA%\Programs\Git\cmd\git.exe" (
+    set "GITCMDDIR=%LOCALAPPDATA%\Programs\Git\cmd"
+    exit /b 0
+)
+
+REM Also check Git for Windows' registry InstallPath in case Git was
+REM installed to a custom directory.
+for %%K in (
+    "HKLM\SOFTWARE\GitForWindows"
+    "HKCU\SOFTWARE\GitForWindows"
+    "HKLM\SOFTWARE\WOW6432Node\GitForWindows"
+) do (
+    for /f "tokens=1,2,*" %%A in ('reg.exe query "%%~K" /v InstallPath 2^>nul ^| find /i "InstallPath"') do (
+        if /i "%%A"=="InstallPath" (
+            if exist "%%C\cmd\git.exe" (
+                set "GITCMDDIR=%%C\cmd"
+                exit /b 0
+            )
+        )
+    )
+)
+
+exit /b 1
 
 :install_pkg
 set "PKG=%~1"
