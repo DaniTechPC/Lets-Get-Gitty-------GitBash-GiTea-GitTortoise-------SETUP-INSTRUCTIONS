@@ -3,14 +3,15 @@ cat <<'TXT'
 Git Bash Linux-Like Environment
 ===============================
 
-Common commands already supplied by Git Bash:
+Common commands supplied by a normal Git for Windows installation:
   ls cd pwd mkdir rmdir rm cp mv touch cat echo clear
   grep sed awk find sort uniq head tail wc cut xargs
-  chmod ln tar gzip gunzip ssh scp sftp curl vim
+  chmod ln tar gzip gunzip ssh scp sftp curl vim nano
   ps kill which env export history bash sh git
 
 Added Linux-style compatibility commands:
-  apt / apt-get   WinGet-backed package management
+  apt / apt-get   WinGet-backed package management when WinGet is available
+  wget            Local wget-style wrapper using Git Bash's curl
   man             Show a command's --help output in less
   ifconfig        Windows network information
   ip              Limited: ip addr, ip link, ip route
@@ -18,32 +19,20 @@ Added Linux-style compatibility commands:
   open            Open a file/folder with Windows
   snap            Explains why Snap requires real Linux/WSL
 
-Convenience aliases:
-  ll la l
-  .. ... ....
-  cls / c
-  home
+Optional:
+  jq              Install only if needed: apt install jq
 
-Installed automatically when WinGet is available:
-  nano
-  wget
-  jq
-
-Package examples:
+Useful:
   apt update
   apt search python
   apt install make
-  apt install ripgrep
-  apt remove jq
-
-Useful diagnostics:
-  which <command>
-  type <command>
-  echo $PATH
-  refreshpath
   linux-check
+  refreshpath
 
-This environment is Git Bash on Windows, not a Linux kernel. Commands such as
-systemctl, snap packages, kernel modules, /dev hardware behavior, and Linux
-service management require WSL or a real Linux machine.
+The base Git Bash setup does not require WinGet. WinGet is only used when
+you explicitly use the apt compatibility command to install software.
+
+This is Git Bash on Windows, not a Linux kernel. Linux-only features such as
+systemctl, Snap packages, kernel modules and Linux service management require
+WSL or a real Linux machine.
 TXT

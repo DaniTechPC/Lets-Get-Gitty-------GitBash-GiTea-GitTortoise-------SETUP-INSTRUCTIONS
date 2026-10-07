@@ -89,7 +89,7 @@ echo   [OK] New CMD windows will recognize the "git" command.
 REM ------------------------------------------------------------
 REM Verify package files exist in .\Batch-Dependencies beside this BAT.
 REM ------------------------------------------------------------
-for %%F in (".minttyrc" ".bashrc" ".bash_profile" "bin\apt" "bin\linux-help") do (
+for %%F in (".minttyrc" ".bashrc" ".bash_profile" "bin\apt" "bin\linux-help" "bin\wget") do (
     if not exist "%DEPS%%%~F" (
         echo ERROR: Missing setup file: %%~F
         echo Keep this BAT beside the Batch-Dependencies folder.
@@ -184,23 +184,22 @@ if /i "%SUDO_MODE%"=="0x1" (
 :sudo_done
 
 REM ------------------------------------------------------------
-REM Install a few small, familiar CLI tools through WinGet.
-REM Failure of one optional tool does not stop the configuration.
+REM WinGet is NOT used during base setup.
+REM It is detected only because the apt compatibility wrapper can use it
+REM later if the user explicitly runs "apt install ...".
 REM ------------------------------------------------------------
+echo [6/8] Checking optional WinGet backend for apt...
 where winget.exe >nul 2>&1
 if errorlevel 1 (
-    echo [6/8] WinGet not found - skipping optional nano/wget/jq installs.
-    echo       The apt wrapper is installed, but requires WinGet to install packages.
-    goto :skip_tools
+    echo   [INFO] WinGet is not currently available.
+    echo          Git Bash will still work normally.
+    echo          Only "apt install" package installation will be unavailable.
+) else (
+    for /f "delims=" %%V in ('winget.exe --version 2^>nul') do set "WINGET_VERSION=%%V"
+    echo   [OK] WinGet backend detected for optional apt package installs.
+    if defined WINGET_VERSION echo        !WINGET_VERSION!
 )
 
-echo [6/8] Installing familiar command-line tools with WinGet...
-echo.
-call :install_pkg GNU.Nano nano
-call :install_pkg JernejSimoncic.Wget wget
-call :install_pkg jqlang.jq jq
-
-:skip_tools
 REM ------------------------------------------------------------
 REM Final Git/CMD verification.
 REM ------------------------------------------------------------
@@ -235,7 +234,7 @@ echo   linux-help
 echo   ll
 echo   nano --version
 echo   wget --version
-echo   jq --version
+echo   linux-check
 echo   ifconfig
 echo   ip addr
 echo   free
@@ -287,24 +286,6 @@ for %%K in (
 )
 
 exit /b 1
-
-:install_pkg
-set "PKG=%~1"
-set "FRIENDLY=%~2"
-winget.exe list --id "%PKG%" --exact >nul 2>&1
-if not errorlevel 1 (
-    echo   [OK] %FRIENDLY% is already installed.
-    exit /b 0
-)
-echo   Installing %FRIENDLY%...
-winget.exe install --id "%PKG%" --exact --silent --accept-package-agreements --accept-source-agreements
-if errorlevel 1 (
-    echo   [WARN] Could not automatically install %FRIENDLY%.
-    echo          You can try later from Git Bash: apt install %FRIENDLY%
-) else (
-    echo   [OK] %FRIENDLY% installed.
-)
-exit /b 0
 
 :copy_error
 echo.

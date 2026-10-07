@@ -3,27 +3,43 @@
 printf '%s\n' 'Git Bash Linux-Like Environment Check'
 printf '%s\n' '====================================='
 
-check() {
-    local name="$1"
-    if command -v "$name" >/dev/null 2>&1; then
-        printf '  [OK]   %-12s %s\n' "$name" "$(command -v "$name")"
+required() {
+    if command -v "$1" >/dev/null 2>&1; then
+        printf '  [OK]       %-12s %s\n' "$1" "$(command -v "$1")"
     else
-        printf '  [MISS] %-12s\n' "$name"
+        printf '  [MISS]     %-12s\n' "$1"
     fi
 }
 
-for c in bash git ls grep sed awk find tar gzip ssh curl vim apt apt-get man ifconfig ip free open linux-help nano wget jq sudo; do
-    check "$c"
-done
+optional() {
+    if command -v "$1" >/dev/null 2>&1; then
+        printf '  [OK]       %-12s %s\n' "$1" "$(command -v "$1")"
+    else
+        printf '  [OPTIONAL] %-12s not installed\n' "$1"
+    fi
+}
 
 echo
+echo "Core Git Bash"
+echo "-------------"
+for c in bash git ls grep sed awk find tar gzip ssh curl vim nano; do required "$c"; done
+
+echo
+echo "Linux Compatibility"
+echo "-------------------"
+for c in apt apt-get wget man ifconfig ip free open linux-help sudo; do required "$c"; done
+
+echo
+echo "Optional Tools"
+echo "--------------"
+optional jq
+
+echo
+echo "Package Manager"
+echo "---------------"
 if command -v winget.exe >/dev/null 2>&1 || command -v winget >/dev/null 2>&1; then
-    echo "  [OK]   WinGet backend detected"
+    echo "  [OK]       WinGet backend available for apt installs"
 else
-    echo "  [WARN] WinGet backend not detected; apt install will not work."
+    echo "  [OPTIONAL] WinGet not available; base environment still works."
+    echo "             Only 'apt install' package installation is unavailable."
 fi
-
-echo
-echo "If nano/wget/jq were just installed but show [MISS], run:"
-echo "  refreshpath"
-echo "or close and reopen Git Bash."
