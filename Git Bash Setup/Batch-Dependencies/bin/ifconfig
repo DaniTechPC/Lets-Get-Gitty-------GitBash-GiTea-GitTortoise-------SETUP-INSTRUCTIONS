@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-if [[ "${1:-}" == "-a" ]]; then
-    ipconfig.exe /all
-else
-    ipconfig.exe
-fi
