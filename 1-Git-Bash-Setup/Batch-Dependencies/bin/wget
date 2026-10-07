@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# wget compatibility wrapper for Git Bash.
+# Uses Git Bash's built-in curl; no separate wget install is required.
+
+set -u
+
+version() {
+    echo "wget compatibility wrapper 1.0 (curl backend)"
+    curl --version | head -n 1
+}
+
+help_text() {
+    cat <<'TXT'
+wget compatibility wrapper
+Usage:
+  wget URL
+  wget -O FILE URL
+  wget -q URL
+  wget -qO- URL
+  wget -c URL
+  wget --no-check-certificate URL
+  wget --version
+
+This wrapper uses curl and supports the most common wget usage.
+TXT
+}
+
+if ! command -v curl >/dev/null 2>&1; then
+    echo "ERROR: curl was not found."
+    echo "A normal Git for Windows installation should include curl."
+    exit 1
+fi
+
+case "${1:-}" in
+    --version|-V) version; exit 0 ;;
+    --help|-h|"") help_text; exit 0 ;;
+esac
+
+quiet=0
+resume=0
+insecure=0
+output=""
+stdout_mode=0
+url=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -q|--quiet) quiet=1; shift ;;
+        -c|--continue) resume=1; shift ;;
+        --no-check-certificate) insecure=1; shift ;;
+        -qO-) quiet=1; stdout_mode=1; shift ;;
+        -O)
+            [[ $# -ge 2 ]] || { echo "wget: -O requires a filename"; exit 2; }
+            output="$2"
+            [[ "$output" == "-" ]] && stdout_mode=1
+            shift 2
+            ;;
+        http://*|https://*|ftp://*) url="$1"; shift ;;
+        --) shift; [[ $# -gt 0 ]] && url="$1"; shift || true ;;
+        -*) echo "wget wrapper: unsupported option: $1"; echo "Run: wget --help"; exit 2 ;;
+        *) url="$1"; shift ;;
+    esac
+done
+
+[[ -n "$url" ]] || { echo "wget: missing URL"; exit 2; }
+
+args=(-L --fail)
+[[ $quiet -eq 1 ]] && args+=(-sS)
+[[ $resume -eq 1 ]] && args+=(-C -)
+[[ $insecure -eq 1 ]] && args+=(-k)
+
+if [[ $stdout_mode -eq 1 ]]; then
+    exec curl "${args[@]}" "$url"
+elif [[ -n "$output" ]]; then
+    exec curl "${args[@]}" -o "$output" "$url"
+else
+    exec curl "${args[@]}" -O "$url"
+fi
