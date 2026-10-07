@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# Ubuntu-style APT compatibility layer for Git Bash on Windows.
+# This is NOT Debian/Ubuntu APT. It translates common APT actions to WinGet.
+
+set -u
+
+winget_cmd=""
+if command -v winget.exe >/dev/null 2>&1; then
+    winget_cmd="winget.exe"
+elif command -v winget >/dev/null 2>&1; then
+    winget_cmd="winget"
+fi
+
+banner() {
+    echo "Git Bash APT compatibility layer (WinGet backend)"
+}
+
+need_winget() {
+    if [[ -z "$winget_cmd" ]]; then
+        echo "ERROR: WinGet was not found."
+        echo "Install/update Microsoft App Installer, then open a new terminal."
+        exit 1
+    fi
+}
+
+map_package() {
+    case "$1" in
+        nano) echo "GNU.Nano" ;;
+        wget) echo "JernejSimoncic.Wget" ;;
+        make) echo "GnuWin32.Make" ;;
+        jq) echo "jqlang.jq" ;;
+        ripgrep|rg) echo "BurntSushi.ripgrep.MSVC" ;;
+        fd|fd-find) echo "sharkdp.fd" ;;
+        bat) echo "sharkdp.bat" ;;
+        cmake) echo "Kitware.CMake" ;;
+        node|nodejs|npm) echo "OpenJS.NodeJS.LTS" ;;
+        pandoc) echo "JohnMacFarlane.Pandoc" ;;
+        git) echo "Git.Git" ;;
+        *) echo "" ;;
+    esac
+}
+
+install_one() {
+    local pkg="$1"
+    local mapped
+    mapped="$(map_package "$pkg")"
+
+    echo
+    if [[ -n "$mapped" ]]; then
+        echo "Installing $pkg  ->  $mapped"
+        "$winget_cmd" install --id "$mapped" --exact --accept-package-agreements --accept-source-agreements
+    else
+        echo "No built-in Ubuntu-to-WinGet mapping for '$pkg'."
+        echo "WinGet will search/install using the package name instead."
+        "$winget_cmd" install "$pkg" --accept-package-agreements --accept-source-agreements
+    fi
+}
+
+remove_one() {
+    local pkg="$1"
+    local mapped
+    mapped="$(map_package "$pkg")"
+    if [[ -n "$mapped" ]]; then
+        "$winget_cmd" uninstall --id "$mapped" --exact
+    else
+        "$winget_cmd" uninstall "$pkg"
+    fi
+}
+
+show_help() {
+    banner
+    cat <<'TXT'
+
+Supported familiar commands:
+  apt update
+  apt upgrade
+  apt search <name>
+  apt install <package> [package...]
+  apt remove <package> [package...]
+  apt list --installed
+  apt show <package>
+
+Known Linux-name mappings include:
+  nano, wget, make, jq, ripgrep/rg, fd/fd-find, bat,
+  cmake, node/nodejs/npm, pandoc, git
+
+Examples:
+  apt update
+  apt install nano wget
+  apt search python
+  apt install python
+  apt list --installed
+
+Important:
+  This command uses Windows Package Manager (WinGet). It is not real
+  Debian/Ubuntu APT, so Linux-only packages and package names may differ.
+TXT
+}
+
+cmd="${1:-help}"
+if [[ $# -gt 0 ]]; then shift; fi
+
+case "$cmd" in
+    help|-h|--help)
+        show_help
+        ;;
+    update)
+        need_winget
+        banner
+        "$winget_cmd" source update
+        ;;
+    upgrade|full-upgrade)
+        need_winget
+        banner
+        "$winget_cmd" upgrade --all --accept-package-agreements --accept-source-agreements
+        ;;
+    search)
+        need_winget
+        if [[ $# -lt 1 ]]; then echo "Usage: apt search <name>"; exit 2; fi
+        "$winget_cmd" search "$@"
+        ;;
+    install)
+        need_winget
+        if [[ $# -lt 1 ]]; then echo "Usage: apt install <package> [package...]"; exit 2; fi
+        for pkg in "$@"; do install_one "$pkg"; done
+        echo
+        echo "If a newly installed command is not found yet, run: refreshpath"
+        echo "or close and reopen Git Bash."
+        ;;
+    remove|uninstall|purge)
+        need_winget
+        if [[ $# -lt 1 ]]; then echo "Usage: apt remove <package> [package...]"; exit 2; fi
+        for pkg in "$@"; do remove_one "$pkg"; done
+        ;;
+    list)
+        need_winget
+        if [[ "${1:-}" == "--installed" ]]; then
+            "$winget_cmd" list
+        else
+            "$winget_cmd" list "$@"
+        fi
+        ;;
+    show)
+        need_winget
+        if [[ $# -lt 1 ]]; then echo "Usage: apt show <package>"; exit 2; fi
+        pkg="$1"
+        mapped="$(map_package "$pkg")"
+        if [[ -n "$mapped" ]]; then
+            "$winget_cmd" show --id "$mapped" --exact
+        else
+            "$winget_cmd" show "$pkg"
+        fi
+        ;;
+    autoremove|clean|autoclean)
+        banner
+        echo "'$cmd' has no safe direct WinGet equivalent, so nothing was changed."
+        ;;
+    *)
+        echo "Unknown apt command: $cmd"
+        echo "Run: apt help"
+        exit 2
+        ;;
+esac

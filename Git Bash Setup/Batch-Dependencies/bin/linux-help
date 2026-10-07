@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+cat <<'TXT'
+Git Bash Linux-Like Environment
+===============================
+
+Common commands already supplied by Git Bash:
+  ls cd pwd mkdir rmdir rm cp mv touch cat echo clear
+  grep sed awk find sort uniq head tail wc cut xargs
+  chmod ln tar gzip gunzip ssh scp sftp curl vim
+  ps kill which env export history bash sh git
+
+Added Linux-style compatibility commands:
+  apt / apt-get   WinGet-backed package management
+  man             Show a command's --help output in less
+  ifconfig        Windows network information
+  ip              Limited: ip addr, ip link, ip route
+  free            Memory summary
+  open            Open a file/folder with Windows
+  snap            Explains why Snap requires real Linux/WSL
+
+Convenience aliases:
+  ll la l
+  .. ... ....
+  cls / c
+  home
+
+Installed automatically when WinGet is available:
+  nano
+  wget
+  jq
+
+Package examples:
+  apt update
+  apt search python
+  apt install make
+  apt install ripgrep
+  apt remove jq
+
+Useful diagnostics:
+  which <command>
+  type <command>
+  echo $PATH
+  refreshpath
+  linux-check
+
+This environment is Git Bash on Windows, not a Linux kernel. Commands such as
+systemctl, snap packages, kernel modules, /dev hardware behavior, and Linux
+service management require WSL or a real Linux machine.
+TXT
