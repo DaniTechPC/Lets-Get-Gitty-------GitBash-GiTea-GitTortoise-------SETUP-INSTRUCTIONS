@@ -95,9 +95,14 @@ if exist "%BODY_PRE%" (
 
 REM ------------------------------------------------------------
 REM Write extra_links.tmpl
+REM Use normal BAT output instead of inline PowerShell so HTML
+REM quotation marks are preserved exactly.
 REM ------------------------------------------------------------
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$owner=$env:GITEA_OWNER; $path=$env:EXTRA_LINKS; $text='<a class=""item"" href=""{{AppSubUrl}}/'+$owner+'/Gitea-Help-Documents"">' + [Environment]::NewLine + '  Help / Getting Started' + [Environment]::NewLine + '</a>' + [Environment]::NewLine; [System.IO.File]::WriteAllText($path,$text,(New-Object System.Text.UTF8Encoding($false)))"
+(
+    echo ^<a class="item" href="{{AppSubUrl}}/%GITEA_OWNER%/Gitea-Help-Documents"^>
+    echo   Help / Getting Started
+    echo ^</a^>
+) > "%EXTRA_LINKS%"
 
 if errorlevel 1 (
     echo.
@@ -110,8 +115,14 @@ if errorlevel 1 (
 REM ------------------------------------------------------------
 REM Write body_inner_pre.tmpl
 REM ------------------------------------------------------------
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$owner=$env:GITEA_OWNER; $path=$env:BODY_PRE; $nl=[Environment]::NewLine; $text='<div class=""ui info message""'+$nl+'     style=""margin: 0; border-radius: 0; text-align: center;"">'+$nl+'  <strong>New to Gitea?</strong>'+$nl+'  <a href=""{{AppSubUrl}}/'+$owner+'/Gitea-Help-Documents"">'+$nl+'    Open the Getting Started Wiki'+$nl+'  </a>'+$nl+'</div>'+$nl; [System.IO.File]::WriteAllText($path,$text,(New-Object System.Text.UTF8Encoding($false)))"
+(
+    echo ^<div class="ui info message" style="margin: 0; border-radius: 0; text-align: center;"^>
+    echo   ^<strong^>New to Gitea Version Control?^</strong^>
+    echo   ^<a href="{{AppSubUrl}}/%GITEA_OWNER%/Gitea-Help-Documents"^>
+    echo     Open the Getting Started Wiki
+    echo   ^</a^>
+    echo ^</div^>
+) > "%BODY_PRE%"
 
 if errorlevel 1 (
     echo.
